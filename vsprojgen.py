@@ -1,14 +1,17 @@
 import shutil
 import os
 from argparse import ArgumentParser
+import tkinter as tk
+from tkinter import messagebox
+import tkinter.ttk as ttk
+from PIL import Image, ImageTk
 
-solution_file_begin = '''Microsoft Visual Studio Solution File, Format Version 12.00
+# solution file template string
+solution_file = '''Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.28307.1082
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") ="'''
-
-solution_file_end = '''.vcxproj", "{30D10229-BE5A-42BC-AB81-A84D3935A0F1}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "project_name","project_name\project_name.vcxproj", "{30D10229-BE5A-42BC-AB81-A84D3935A0F1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -35,7 +38,8 @@ Global
 	EndGlobalSection
 EndGlobal'''
 
-vcxproj_beg = r'''<?xml version="1.0" encoding="utf-8"?>
+# visual studio project file string template
+vcxproj = r'''<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -58,9 +62,7 @@ vcxproj_beg = r'''<?xml version="1.0" encoding="utf-8"?>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{30D10229-BE5A-42BC-AB81-A84D3935A0F1}</ProjectGuid>
-    <RootNamespace>'''
-
-vcxproj_end =r'''</RootNamespace>
+    <RootNamespace>project_name</RootNamespace>
     <WindowsTargetPlatformVersion>10.0.18362.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -109,25 +111,25 @@ vcxproj_end =r'''</RootNamespace>
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IntDir>$(ProjectDir)temp\</IntDir>
-    <LibraryPath>C:\Users\aitor\source\repos\2DGeometries\2DGeometries\lib;$(LibraryPath)</LibraryPath>
+    <IntDir>$(SolutionDir)temp\</IntDir>
+    <LibraryPath>C:$(ProjectDir)lib\;$(LibraryPath)</LibraryPath>
     <ExecutablePath>$(ExecutablePath)</ExecutablePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IntDir>$(ProjectDir)temp\</IntDir>
-    <LibraryPath>C:\Users\aitor\source\repos\2DGeometries\2DGeometries\lib;$(LibraryPath)</LibraryPath>
+    <IntDir>$(SolutionDir)temp\</IntDir>
+    <LibraryPath>C:$(ProjectDir)lib\;$(LibraryPath)</LibraryPath>
     <ExecutablePath>$(ExecutablePath)</ExecutablePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>$(SolutionDir)$(Configuration)\</OutDir>
-    <IntDir>$(ProjectDir)temp\</IntDir>
-    <LibraryPath>C:\Users\aitor\source\repos\2DGeometries\2DGeometries\lib;$(LibraryPath)</LibraryPath>
+    <IntDir>$(SolutionDir)temp\</IntDir>
+    <LibraryPath>C:$(ProjectDir)lib\;$(LibraryPath)</LibraryPath>
     <ExecutablePath>$(ExecutablePath)</ExecutablePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(SolutionDir)$(Configuration)\</OutDir>
-    <IntDir>$(ProjectDir)temp\</IntDir>
-    <LibraryPath>C:\Users\aitor\source\repos\2DGeometries\2DGeometries\lib;$(LibraryPath)</LibraryPath>
+    <IntDir>$(SolutionDir)temp\</IntDir>
+    <LibraryPath>C:$(ProjectDir)lib;$(LibraryPath)</LibraryPath>
     <ExecutablePath>$(ExecutablePath)</ExecutablePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -136,12 +138,12 @@ vcxproj_end =r'''</RootNamespace>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\Users\aitor\source\repos\2DGeometries\2DGeometries\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp14</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
-      <AdditionalLibraryDirectories>C:\Users\aitor\source\repos\2DGeometries\2DGeometries\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(ProjectDir)lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>opengl32.lib;glew32d.lib;glfw3dll.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
@@ -151,12 +153,12 @@ vcxproj_end =r'''</RootNamespace>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\Users\aitor\source\repos\2DGeometries\2DGeometries\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp14</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
-      <AdditionalLibraryDirectories>C:\Users\aitor\source\repos\2DGeometries\2DGeometries\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(ProjectDir)lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>opengl32.lib;glew32d.lib;glfw3dll.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
@@ -168,14 +170,14 @@ vcxproj_end =r'''</RootNamespace>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\Users\aitor\source\repos\2DGeometries\2DGeometries\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp14</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>C:\Users\aitor\source\repos\2DGeometries\2DGeometries\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(ProjectDir)lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>opengl32.lib;glew32d.lib;glfw3dll.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
@@ -187,14 +189,14 @@ vcxproj_end =r'''</RootNamespace>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\Users\aitor\source\repos\2DGeometries\2DGeometries\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp14</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>C:\Users\aitor\source\repos\2DGeometries\2DGeometries\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(ProjectDir)lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>opengl32.lib;glew32d.lib;glfw3dll.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
@@ -596,7 +598,7 @@ vcxproj_end =r'''</RootNamespace>
     <ClCompile Include="include\glm\detail\glm.cpp" />
     <ClCompile Include="ShaderProgram\ShaderProgram.cpp" />
     <ClCompile Include="src\camera.cpp" />
-    <ClCompile Include="src\circle.cpp" />
+    <ClCompile Include="src\main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Library Include="lib\glew32d.lib" />
@@ -607,8 +609,7 @@ vcxproj_end =r'''</RootNamespace>
   </ImportGroup>
 </Project>'''
   
-  
-
+# visual studio filters file template string
 vcxproj_filters = r'''<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
@@ -1018,33 +1019,8 @@ vcxproj_filters = r'''<?xml version="1.0" encoding="utf-8"?>
   </ItemGroup>
 </Project>'''
 
-def parse_args():
-    parser = ArgumentParser(description="project name")
-    parser.add_argument('-n', '--pname', type=str, metavar='', required=True, help='openGl project name')
-    return parser.parse_args()
-
-def create_solution_file(project_name):
-    solution_file_extension = '.sln'
-    file_content = solution_file_begin + project_name+'","'+project_name+'\\' +project_name+ solution_file_end
-    with open(project_name+solution_file_extension, 'w') as f:
-    	f.write(file_content)
-
-
-def create_project_file(project_name):
-    vcxproj_file_extension = '.vcxproj'
-    file_content = vcxproj_beg + project_name + vcxproj_end
-    with open(project_name+vcxproj_file_extension, 'w') as f:
-        f.write(file_content)
-
-
-def create_project_filters(project_name):
-    vcxproj_filters_file_extension = '.vcxproj.filters'
-    with open(project_name+vcxproj_filters_file_extension, 'w') as f:
-        f.write(vcxproj_filters)
-
-def create_project_user(project_name):
-    vcxproj_usr_file_extension = '.vcxproj.user'
-    vcxprojuser = '''<?xml version="1.0" encoding="utf-8"?>
+ # visual studio users file template string
+vcxprojuser = '''<?xml version="1.0" encoding="utf-8"?>
     <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
       <PropertyGroup>
         <ShowAllFiles>true</ShowAllFiles>
@@ -1067,17 +1043,107 @@ def create_project_user(project_name):
       </PropertyGroup>
     </Project>'''
 
+     
+#initialize the tkinter library        
+root = tk.Tk()
+#main top level frame
+main_frame = tk.LabelFrame(root,text="Main Frame",relief=tk.RAISED )
+# create 2 subframes
+subframe_1 =  tk.LabelFrame(main_frame)
+subframe_2 =  tk.LabelFrame(main_frame)
+#create the entry for the new project name
+entry = tk.Entry(subframe_2)
+# global variables
+visual_studio_projects_directory = 'C:/Users/aitor/source/repos'
+project_name: str = None
+folder_icon = None
+template_dir = os.path.join(os.getcwd(), 'ProjectTemplate_GL')
+# list of recently created projects. We create a list with the new created projects to 
+# delete. The reason of that is to protect deliting existing projects that have not 
+# been created in the current sesion. It could be usefull to delte projects old projects from
+# the tool but this is a bit dangerous and I don't want to delete projects by accident
+new_created_projects = []
+
+# we save the directory where the script was launched because we will chande directories
+# and we need to know the python scrip directory to load images or go back where we started
+app_launch_dir = os.getcwd()
+
+# create list box with a new style to avoid icon overlaping 
+s = ttk.Style()
+s.configure('treeStyle.Treeview', rowheight=40)
+project_list_box = ttk.Treeview(subframe_1, height=4, style='treeStyle.Treeview')
+
+#change select mode to not allow multiple selection of items
+project_list_box.config(selectmode='browse')
+# configure the heigh of the tree
+project_list_box.config(height=10)
+
+#callbacks
+def current_selected_items_callback(event):
+  item = project_list_box.selection()[0]
+  entry.delete(0,"end")
+  entry.insert(0, project_list_box.item(item,"text"))
+
+def create_solution_file(project_name):
+    solution_file_extension = '.sln'
+    file_content = solution_file.replace('project_name',project_name)
+    with open(project_name+solution_file_extension, 'w') as f:
+    	f.write(file_content)
+
+
+def create_project_file(project_name):
+    vcxproj_file_extension = '.vcxproj'
+    file_content = vcxproj.replace('project_name', project_name)
+    with open(project_name+vcxproj_file_extension, 'w') as f:
+        f.write(file_content)
+
+
+def create_project_filters(project_name):
+    vcxproj_filters_file_extension = '.vcxproj.filters'
+    with open(project_name+vcxproj_filters_file_extension, 'w') as f:
+        f.write(vcxproj_filters)
+
+
+def create_project_user(project_name):
+    vcxproj_usr_file_extension = '.vcxproj.user'
     with open(project_name+vcxproj_usr_file_extension, 'w') as f:
         f.write(vcxprojuser)
 
+# open the created project
+def open_visual_studio():
+  open_project = entry.get()
+  if len(open_project) == 0 :
+    tk.messagebox.showerror("project not found","select a project to open!")
+  else:
+    project_folder = os.path.join(visual_studio_projects_directory,open_project)
+    solution_file = os.path.join(project_folder,open_project+'.sln')
+    os.system('"%s"'% solution_file)
 
-if __name__ == "__main__":
+#delete selected project
+def delete_project():
+  delete_project = entry.get()
+  can_be_deleted = False
+  for project in new_created_projects:
+    if project == delete_project:
+      can_be_deleted = True
+      break
+  if can_be_deleted:
+    shutil.rmtree(os.path.join(visual_studio_projects_directory,delete_project))
+    messagebox.showinfo("Project Deleted","open gl project: "+ project_name + " has been deleted")
+    # remove item from the list from the list
+    new_created_projects.remove(delete_project)
+    # remove item from the tree view
+    project_list_box.delete(*project_list_box.get_children())
+    # update tree view
+    fill_tree_view()
+  else:
+    messagebox.showerror("Delete Error", "you can't delete projects that \nhave not being created in this session for safety reasons!")
+    
 
-    args = parse_args()
-    visual_studio_projects_directory = 'C:/Users/aitor/source/repos'
-    template_dir = os.path.join(os.getcwd(), 'ProjectTemplate_GL')
-    project_name = args.pname
-
+# create an openGL project with the given name
+def create_project():
+    global project_name 
+    project_name = entry.get()
     os.chdir(visual_studio_projects_directory)
     # create solution directory in the folder where all visual studio projects are by default
     os.makedirs(os.path.join(project_name, 'Debug'))
@@ -1096,3 +1162,59 @@ if __name__ == "__main__":
     # move the libs to ../Debug folder
     shutil.move('glew32d.dll', '../Debug')
     shutil.move('glfw3.dll', '../Debug')
+    messagebox.showinfo("Prject created","open gl project:"+ project_name+ " succesfully created")
+    project_list_box.delete(*project_list_box.get_children())
+    fill_tree_view()
+    global new_created_projects 
+    new_created_projects.append(project_name)
+    os.chdir(visual_studio_projects_directory)
+
+
+def load_icons():
+  global folder_icon
+  icon_path = os.path.join(app_launch_dir,"ficon.png")
+  photo = Image.open(icon_path)
+  folder_icon = ImageTk.PhotoImage(photo)
+
+
+def fill_tree_view(proj = '%!none!%'):
+    for d in os.listdir(visual_studio_projects_directory):
+      project_list_box.insert('','end',d, text = d,image= folder_icon )
+     
+        
+def run_gui_app():
+  root.title('VS openGl project creator ')
+  root.geometry("300x600") 
+  root.minsize(600,600)
+  root.tk.call('wm', 'iconphoto', root._w, tk.PhotoImage(file=os.path.join(app_launch_dir,"opengl.png")))
+  root.resizable(True,True)
+  label1 = tk.Label(subframe_1, text="vs projects list")
+  label = tk.Label(subframe_2, text="Project name")
+  label.grid(row = 0, column=0)
+  # set tree view callbacks and fill in the tree
+  project_list_box.bind('<Double-1>',current_selected_items_callback)
+  fill_tree_view()
+  # create buttons
+  deletebutton = tk.Button(subframe_2,text="Delete", command = delete_project)
+  button1 = tk.Button(subframe_2, text = "Create", command= create_project)
+  button2 = tk.Button(subframe_2, text = "Open", command = open_visual_studio)
+   #position elements in subrame_2
+  entry.grid(row = 0, column = 2,sticky="we")
+  deletebutton.grid(row=1,column=0, padx=2,pady=10,sticky="we")
+  button1.grid(row= 1, column= 2,padx=2, pady=10,sticky="we")
+  button2.grid(row=1,column=1,padx=1, pady=10,sticky="we")
+  #positon elements in subrame_1
+  label1.pack()
+  project_list_box.pack(fill=tk.BOTH,expand=True,padx = 4,pady=4)
+
+  label.grid(row=0)
+  subframe_1.pack(fill=tk.BOTH,expand=True)
+  subframe_2.pack(fill=tk.BOTH,expand=True)
+  main_frame.pack(fill=tk.BOTH,expand=True)
+  root.mainloop()
+
+
+if __name__ == "__main__":
+  load_icons()
+  run_gui_app()
+ 
