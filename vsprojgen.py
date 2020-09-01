@@ -1058,6 +1058,7 @@ visual_studio_projects_directory = 'C:/Users/aitor/source/repos'
 project_name: str = None
 folder_icon = None
 template_dir = os.path.join(os.getcwd(), 'ProjectTemplate_GL')
+icons_dir = os.path.join(os.getcwd(),'icons')
 # list of recently created projects. We create a list with the new created projects to 
 # delete. The reason of that is to protect deliting existing projects that have not 
 # been created in the current sesion. It could be usefull to delte projects old projects from
@@ -1172,7 +1173,7 @@ def create_project():
 
 def load_icons():
   global folder_icon
-  icon_path = os.path.join(app_launch_dir,"ficon.png")
+  icon_path = os.path.join(icons_dir,"ficon.png")
   photo = Image.open(icon_path)
   folder_icon = ImageTk.PhotoImage(photo)
 
@@ -1186,7 +1187,7 @@ def run_gui_app():
   root.title('VS openGl project creator ')
   root.geometry("300x600") 
   root.minsize(600,600)
-  root.tk.call('wm', 'iconphoto', root._w, tk.PhotoImage(file=os.path.join(app_launch_dir,"opengl.png")))
+  root.tk.call('wm', 'iconphoto', root._w, tk.PhotoImage(file=os.path.join(icons_dir,"opengl.png")))
   root.resizable(True,True)
   label1 = tk.Label(subframe_1, text="vs projects list")
   label = tk.Label(subframe_2, text="Project name")
