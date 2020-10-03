@@ -1,3 +1,7 @@
 __pycache__
 
 gl*
+.vscode/
+*.dll
+*.lib
+ProjectTemplate_GL/dependencies/*

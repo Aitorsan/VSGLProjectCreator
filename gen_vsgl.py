@@ -1,6 +1,5 @@
 import shutil
 import os
-import re
 import tkinter as tk
 import tkinter.ttk as ttk
 import zipfile
@@ -14,7 +13,9 @@ from tkinter.scrolledtext import ScrolledText
 from PIL import Image, ImageTk
 from urllib import request
 from enum import Enum
-
+import subprocess
+from threading import Thread
+import re
 
 def open_file(file,visual_studio_projects_directory):
     file_to_open = os.path.join(visual_studio_projects_directory,file)
@@ -26,168 +27,6 @@ def read_file(dir):
     f.close()
     return template_file
 
-app_logger = logging.getLogger(__name__)
-
-class QueueHandler(logging.Handler):
-    
-    def __init_(self,log_queue):
-      super.__init__()
-      self.log_queue = log_queue
-
-    def emit(self,msg):
-      self.log_queue.put(msg)
-
-
-
-class ConsoleUi:
-    """Poll messages from a logging queue and display them in a scrolled text widget"""
-
-    def __init__(self, frame):
-        self.frame = frame
-        # Create a ScrolledText wdiget
-        self.scrolled_text = ScrolledText(frame, state='disabled', height=12)
-        self.scrolled_text.grid(row=0, column=0, sticky=(tk.N, tk.S, tk.W, tk.E))
-        self.scrolled_text.configure(font='TkFixedFont')
-        self.scrolled_text.tag_config('INFO', foreground='black')
-        self.scrolled_text.tag_config('DEBUG', foreground='gray')
-        self.scrolled_text.tag_config('WARNING', foreground='orange')
-        self.scrolled_text.tag_config('ERROR', foreground='red')
-        self.scrolled_text.tag_config('CRITICAL', foreground='red', underline=1)
-        # Create a logging handler using a queue
-        self.log_queue = queue.Queue()
-        self.queue_handler = QueueHandler(self.log_queue)
-        formatter = logging.Formatter('%(asctime)s: %(message)s')
-        self.queue_handler.setFormatter(formatter)
-        app_logger.addHandler(self.queue_handler)
-        # Start polling messages from the queue
-        self.frame.after(100, self.poll_log_queue)
-
-    def display(self, record):
-        msg = self.queue_handler.format(record)
-        self.scrolled_text.configure(state='normal')
-        self.scrolled_text.insert(tk.END, msg + '\n', record.levelname)
-        self.scrolled_text.configure(state='disabled')
-        # Autoscroll to the bottom
-        self.scrolled_text.yview(tk.END)
-
-    def poll_log_queue(self):
-        # Check every 100ms if there is a new message in the queue to display
-        while True:
-            try:
-                record = self.log_queue.get(block=False)
-            except queue.Empty:
-                break
-            else:
-                self.display(record)
-
-# DependcyLoader, builds and install glfw and glew.In windows you will need to start a vcvarsall.bat sesion with
-# the desire configuration x64 or x32 bit and launch the script from that terminal. The reason is because cmake will
-# look for the compiler so the windows build enviroment must be prepare that means set or the enviroments and so on
-# if no it will fail to build the libraries. Currently builds the shared libraries
-# There is no current support for linux at the moment
-class DependencyLoader:
-    # provide the folder where the libraries will be downloaded and the directory to be installed
-    # I assume both glew and glfw libraries will be place under the same directory
-    def __init__(self, dependencies_directory, install_dir):
-        # this links can be change for updated ones when a new version is available
-        self.download_link_glfw = 'https://github.com/glfw/glfw/releases/download/3.3.2/glfw-3.3.2.zip'
-        self.download_link_glew = 'https://sourceforge.net/projects/glew/files/glew/2.1.0/glew-2.1.0.zip/download'
-        self.glew_str = 'glew'
-        self.glfw_str = 'glfw'
-        # this must be match the dowloaded zip files which will change version most likely and the rest will remain
-        self.glfw_str_zip = 'glfw-3.3.2.zip'
-        self.glew_str_zip = 'glew-2.1.0-win32.zip'
-        self.build_tool = 'nmake'
-        # The names of the dlls and .lib files that want to install TODO: add corresponding for linux future?
-        self.glew_dll_debug = 'glew32.dll'
-        self.glew_lib_debug = 'glew32.lib'
-        self.glfw_dll = 'glfw3.dll'
-        self.glfw_lib = 'glfw3dll.lib'
-        # names of the unziped directories
-        self.glewdir_name = []
-        self.glfwdir_name = []
-        self.dependencies_dir = dependencies_directory
-        self.install_dir = install_dir
-        self.glew_str_version_zip = os.path.join(dependencies_directory, self.glew_str_zip)
-        self.glfw_str_version_zip = os.path.join(dependencies_directory, self.glfw_str_zip)
-
-    def donwload_and_build_deps_ifnot_exist(self,controller,build_type):
-        glew_pattern = re.compile(r'glew')
-        glfw_pattern = re.compile(r'glfw')
-        print("current dir:")
-        print(os.getcwd())
-        list_dirs = [ item for item in os.listdir(self.dependencies_dir)]
-        glew_matches_it = glew_pattern.finditer(' '.join(list_dirs))
-        glfw_matches_it = glfw_pattern.finditer(' '.join(list_dirs))
-
-        if all(False for _ in glew_matches_it):
-             self.download_lib(self.download_link_glew,self.glew_str_version_zip)
-             self.build_glew()
-             controller.app.show_console_out()
-
-        if all(False for _ in glfw_matches_it):
-            self.download_lib(self.download_link_glfw,self.glfw_str_version_zip)
-            self.build_glfw(build_type)
-            controller.app.show_console_out()
-
-    def download_lib(self, name,lib_zip):
-        # check if the dependencies are there before donwloading them
-        download_zip = request.urlopen(name)
-        lib_data = download_zip.read()
-        file = open(lib_zip, 'bw')
-        file.write(lib_data)
-        file.close()
-        self.unzip_dependencies(self.dependencies_dir,lib_zip)
-        os.remove(lib_zip)
-
-    def unzip_dependencies(self, directory_to_extract_to,lib_zip):
-        with zipfile.ZipFile(lib_zip, 'r') as zip_ref:
-            zip_ref.extractall(directory_to_extract_to)
-
-    # To make this build work, it is important to execute the script from a cmd that have executed the vcvarsall.bat x64
-    # This will set up the cl build enviroment for c++, if not cmake will not find the compiler and will fail the build
-    def build_glfw(self, build_type, cmake_generator:str = 'NMake Makefiles'):
-        self.glfwdir_name = [ item for item in os.listdir(self.dependencies_dir) if item.strip().split('-')[0] == self.glfw_str ]
-        old_path = os.getcwd()
-        dir_to_change = os.path.join('ProjectTemplate_GL','dependencies')
-        os.chdir(os.path.join(dir_to_change, self.glfwdir_name[0]))
-        # create out dir build tree. Build stuff in a folder with the name of the build type
-        os.makedirs(build_type)
-        os.chdir(build_type)
-        cmake_cmd = 'cmake -G "{}" -DBUILD_SHARED_LIBS=ON -DCMAKE_BUILD_TYPE={} -DGLFW_BUILD_TESTS=ON -DGLFW_BUILD_EXAMPLES=ON ..'.format(cmake_generator,build_type)
-        os.system(cmake_cmd)
-        os.system(self.build_tool)
-        # restore the path
-        os.chdir(old_path)
-
-    def build_glew(self, cmake_generator:str = 'NMake Makefiles'):
-        self.glewdir_name = [ item for item in os.listdir(self.dependencies_dir) if item.strip().split('-')[0] == self.glew_str ]
-        old_path = os.getcwd()
-        dir_to_change = os.path.join('ProjectTemplate_GL','dependencies')
-        # assume there is only one glew folder in the directory
-        os.chdir(os.path.join(dir_to_change,self.glewdir_name[0]))
-        # I assume they will keep this cmake folder in the package, if glew changes the way it build
-        # with cmake then this should be updated
-        os.chdir(os.path.join('build','cmake'))
-        cmake_cmd = 'cmake . -G "{}"'.format(cmake_generator)
-        os.system(cmake_cmd)
-        os.system(self.build_tool)
-        # restore the path
-        os.chdir(old_path)
-
-    def install_glew(self):
-        # install glew in its place
-        top_level_dir = os.path.join(self.glewdir_name[0],'build')
-        src_subdir = os.path.join(top_level_dir,'cmake')
-        dll_dir = os.path.join(src_subdir,'bin')
-        lib_dir = os.path.join(src_subdir,'lib')
-        shutil.copy(os.path.join(dll_dir,self.glew_dll_debug),self.install_dir)
-        shutil.copy(os.path.join(lib_dir,self.glew_lib_debug),self.install_dir)
-
-    def install_glfw(self,build_type):
-        # install glfw in its place
-        pass
-
 #/////////////////////////////////////////////////////////////
 # Project builder is somehow the model contains the data and
 # the actions to build a visual studio project
@@ -196,7 +35,6 @@ class ProjectBuilder:
 
   def __init__(self,controller):
     self.project_name = 'ProjectTemplate_GL'
-    self.dependency_manager = DependencyLoader(os.path.join(self.project_name,'dependencies'), os.path.join(self.project_name,'lib'))
     self.controller = controller
     self.visual_studio_projects_directory = 'C:/Users/aitor/source/repos'
     self.template_dir = os.path.join(os.getcwd(), self.project_name)
@@ -214,8 +52,7 @@ class ProjectBuilder:
     self.solution_file = read_file(os.path.join(self.template_dir,'template.sln'))
 
   # create an openGL project with the given name
-  def create_project(self,project_name,build_type):
-    self.set_up_dependencies(build_type)
+  def create_project(self,project_name,build_type):  
     os.chdir(self.visual_studio_projects_directory)
     # create solution directory in the folder where all visual studio projects are by default
     os.makedirs(os.path.join(project_name, build_type))
@@ -231,17 +68,29 @@ class ProjectBuilder:
     self.create_project_file(project_name)
     self.create_project_user(project_name)
     self.create_project_filters(project_name)
-
+    print('before moving dlls')
+    print(os.getcwd())
+    folder_to_move = os.path.join('..',build_type)
     # move the libs to ../Debug folder
-    shutil.move('glew32d.dll', '../Debug')
-    shutil.move('glfw3.dll', '../Debug')
-
+    shutil.move('glew32.dll', folder_to_move)
+    shutil.move('glfw3.dll', folder_to_move)
     self.new_created_projects.append(project_name)
     os.chdir(self.visual_studio_projects_directory)
 
-  def set_up_dependencies(self,build_type):
-      self.dependency_manager.donwload_and_build_deps_ifnot_exist(self.controller,build_type)
+  def find_dep(self,dep_name):
+        pattern = re.compile(r''.join(dep_name))
+        list_dirs = [ item for item in os.listdir(os.path.join('ProjectTemplate_GL','lib'))]
+        matches_it = pattern.finditer(' '.join(list_dirs))
 
+        if all(False for _ in matches_it):
+            return False
+        else:
+            return True
+            
+  def set_up_dependencies(self,build_type,build_tool = 'NMake Makefiles'):
+    deps = self.find_dep('glew') or self.find_dep('glfw')
+    if not deps:
+      self.process = subprocess.call(['python3','buildTool.py','-b',build_type,'-t',build_tool])
 
   def create_solution_file(self,project_name):
       solution_file_extension = '.sln'
@@ -267,14 +116,14 @@ class ProjectBuilder:
 
   def delete_project(self,delete_project):
       can_be_deleted = False
-      for project in new_created_projects:
+      for project in self.new_created_projects:
         if project == delete_project:
           can_be_deleted = True
           break
       if can_be_deleted :
         shutil.rmtree(os.path.join(self.visual_studio_projects_directory,delete_project))
         # remove item from the list of all new created projects
-        new_created_projects.remove(delete_project)
+        self.new_created_projects.remove(delete_project)
       return can_be_deleted
 
   # open the created project
@@ -306,9 +155,12 @@ class CallbacksController:
     else:
       self.app.show_message("Delete Error", "you can onlt delete projects that\nbeing created in this session for safety")
 
-  def create_project(self):
+  def create_project_call(self):
     project_name = self.app.entry.get()
-    self.project_builder.create_project(project_name,self.app.build_type_combo_box.get())
+    # arguments
+    build_type = self.app.build_type_combo_box.get()
+    self.project_builder.set_up_dependencies(build_type)
+    self.project_builder.create_project(project_name,build_type)
     self.app.update_tree_view(self.get_visualStudio_proj_dir())
     msg = "Project created","open gl project:"+ project_name + " succesfully created"
     self.app.show_message("Project created", msg, self.app.MSG_TYPE.INFO)
@@ -363,20 +215,18 @@ class CallbacksController:
 # this is the main Gui app or the View
 ###########################################
 class App:
-
   class MSG_TYPE(Enum):
     INFO = 1
     WARN = 2
     ERROR = 3
 
   def __init__(self):
-
     self.icons_dir = os.path.join(os.getcwd(),'icons')
     self.app_controller = CallbacksController(self)
     self.init_tkinter()
     self.load_icons()
     self.init_gui_elements()
-
+    
   def run(self):
     self.root.mainloop()
 
@@ -408,7 +258,6 @@ class App:
     self.root.resizable(True,True)
 
   def init_gui_elements(self):
-
     #create and config menu
     self.menu = tk.Menu(self.root)
     #create menu items
@@ -422,7 +271,6 @@ class App:
     # create 2 subframes
     self.subframe_1 =  tk.LabelFrame(self.main_frame)
     self.subframe_2 =  tk.LabelFrame(self.main_frame)
-    self.console = ConsoleUi(subframe_2)
     #create the entry for the new project name
     self.entry = tk.Entry(self.subframe_2)
     # create list box with a new style to avoid icon overlaping
@@ -446,7 +294,7 @@ class App:
     self.label.grid(row = 0, column=0)
     # create buttons
     self.delete_button = tk.Button(self.subframe_2,text="Delete", command = self.app_controller.delete_project)
-    self.create_button = tk.Button(self.subframe_2, text = "Create", command= self.app_controller.create_project)
+    self.create_button = tk.Button(self.subframe_2, text = "Create", command= self.app_controller.create_project_call)
     self.openproj_button = tk.Button(self.subframe_2, text = "Open", command = self.app_controller.open_visual_studio)
     self.back_button = tk.Button(self.subframe_1,image = self.back_dir_icon, command = self.app_controller.back_directory)
     self.back_button.pack(anchor="nw")
@@ -505,14 +353,6 @@ class App:
       messagebox.showinfo(title,msg)
     elif type == self.MSG_TYPE.ERROR :
       messagebox.showerror(title,msg)
-
-  def show_console_out(self):
-    top = tk.Toplevel()
-    console_out_window = ConsoleUi(top)
-    console_out_window.display("testing")
-
-
-
 
 def main():
   app = App()
