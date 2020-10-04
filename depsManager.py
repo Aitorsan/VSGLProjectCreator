@@ -26,13 +26,11 @@ class DependencyManager:
     # by the build system generator which will always be cmake unless I get to old and there is a better
     # tool in the future
     build_tool = 'nmake'
-
     # The names of the dlls and .lib files that want to install TODO: add corresponding for linux future?
     glew_dll_debug = 'glew32.dll'
     glew_lib_debug = 'glew32.lib'
     glfw_dll = 'glfw3.dll'
     glfw_lib = 'glfw3dll.lib'
-  
     # names of the unziped directories
     glewdir_name = []
     glfwdir_name = []
@@ -43,7 +41,6 @@ class DependencyManager:
         self.dependencies_dir = dependencies_directory
         self.install_dir = install_dir
 
- 
     def install_glew(self):
         # install glew in its place
         if not self.glewdir_name:
@@ -61,7 +58,6 @@ class DependencyManager:
         shutil.copy(os.path.join(lib_dir,self.glew_lib_debug),self.install_dir)
         shutil.copy(os.path.join(self.install_dir,self.glew_dll_debug),'../')
         
-    
     def install_glfw(self,build_type):
         print(os.getcwd())
         if not self.glfwdir_name:
@@ -73,7 +69,6 @@ class DependencyManager:
         shutil.copy(os.path.join(libs_dir,self.glfw_lib), self.install_dir)
         shutil.copy(os.path.join(self.install_dir,self.glfw_dll),'../')
        
-
     def find_dep(self,dep_name):
         pattern = re.compile(r''.join(dep_name))
         list_dirs = [ item for item in os.listdir(self.dependencies_dir)]
@@ -132,22 +127,23 @@ def parse_args():
     parser = argparse.ArgumentParser(description="depency build parameters")
     parser.add_argument('-b','--build_type',type=str ,metavar='',help='build type Debug or Release')
     parser.add_argument('-t','--build_tool', type=str,metavar='',help='NMake, make, VS')
+    parser.add_argument('-d','--launch_dir', type=str, metavar='',help='Script directory')
     return parser.parse_args()
 
 if __name__ == '__main__':
     args = parse_args()
     old_path = os.getcwd()
-
     b_type = 'Debug'
     b_tool = 'NMake Makefiles'
+    launch_dir = args.launch_dir
    
     if args.build_type:
         b_type = args.build_type
 
     if args.build_tool :
         b_tool = args.build_tool
-    curr_dir = os.path.join(os.getcwd(),'ProjectTemplate_GL')
-    curr_dir = os.path.join(curr_dir,'dependencies')
+        
+    curr_dir = os.path.join(launch_dir,'ProjectTemplate_GL','dependencies')
     os.chdir(curr_dir)
     dependency_manager = DependencyManager(curr_dir,'../lib')
     # Check if the library is already there
@@ -163,11 +159,9 @@ if __name__ == '__main__':
         print("---> Building glew...")
         dependency_manager.build_glew(b_tool)
         print(' Dependencies sucessfully build ')
-
-
+    print(os.getcwd())
     # Install librariers
     dependency_manager.install_glew()
     dependency_manager.install_glfw(b_type)
+    print(old_path)
     os.chdir(old_path)
-
-  

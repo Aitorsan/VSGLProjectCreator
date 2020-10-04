@@ -17,6 +17,7 @@ import subprocess
 from threading import Thread
 import re
 
+# those are generic utils functions to read an write to a file
 def open_file(file,visual_studio_projects_directory):
     file_to_open = os.path.join(visual_studio_projects_directory,file)
     os.system('"%s"'% file_to_open)
@@ -34,9 +35,10 @@ def read_file(dir):
 class ProjectBuilder:
 
   def __init__(self,controller):
+    self.launch_dir = os.getcwd()
     self.project_name = 'ProjectTemplate_GL'
     self.controller = controller
-    self.visual_studio_projects_directory = 'C:/Users/aitor/source/repos'
+    self.visual_studio_projects_directory = self.launch_dir
     self.template_dir = os.path.join(os.getcwd(), self.project_name)
     # visual studio project file string template
     self.vcxproj = read_file(os.path.join(self.template_dir,'template.vcxproj'))
@@ -46,13 +48,12 @@ class ProjectBuilder:
     self.vcxprojuser  = read_file(os.path.join(self.template_dir,'template_user.vcxproj.user'))
     # list of recently created projects. We create a list with the new created projects to
     # delete. The reason of that is to protect deliting existing projects that have not
-    # been created in the current sesion. It could be usefull to delte projects old projects from
+    # been created in the current sesion. It could be usefull to delete old projects from
     # the tool but this is a bit dangerous and I don't want to delete projects by accident
     self.new_created_projects = []
     self.solution_file = read_file(os.path.join(self.template_dir,'template.sln'))
 
-  # create an openGL project with the given name
-  def create_project(self,project_name,build_type):  
+  def create_opengl_project(self,project_name,build_type):  
     os.chdir(self.visual_studio_projects_directory)
     # create solution directory in the folder where all visual studio projects are by default
     os.makedirs(os.path.join(project_name, build_type))
@@ -68,37 +69,44 @@ class ProjectBuilder:
     self.create_project_file(project_name)
     self.create_project_user(project_name)
     self.create_project_filters(project_name)
-    print('before moving dlls')
     print(os.getcwd())
     folder_to_move = os.path.join('..',build_type)
     # move the libs to ../Debug folder
     shutil.move('glew32.dll', folder_to_move)
     shutil.move('glfw3.dll', folder_to_move)
     self.new_created_projects.append(project_name)
-    os.chdir(self.visual_studio_projects_directory)
+    os.chdir('../../')
 
-  def find_dep(self,dep_name):
+  def find_dep(self,dep_name,_dir):
         pattern = re.compile(r''.join(dep_name))
-        list_dirs = [ item for item in os.listdir(os.path.join('ProjectTemplate_GL','lib'))]
-        matches_it = pattern.finditer(' '.join(list_dirs))
-
-        if all(False for _ in matches_it):
+        list_deps_dirs = [ item for item in os.listdir(_dir)]
+        deps_dir_matches_it = pattern.finditer(' '.join(list_deps_dirs))
+        if all(False for _ in deps_dir_matches_it):
             return False
         else:
             return True
             
-  def set_up_dependencies(self,build_type,build_tool = 'NMake Makefiles'):
-    deps = self.find_dep('glew') or self.find_dep('glfw')
-    if not deps:
-      self.process = subprocess.call(['python3','buildTool.py','-b',build_type,'-t',build_tool])
-
-  def create_solution_file(self,project_name):
+  def set_up_dependencies(self, build_type, build_tool = 'NMake Makefiles'):
+    curr_dir = os.path.join(self.launch_dir,'ProjectTemplate_GL')
+    first_level_search = self.find_dep('glew',curr_dir) and self.find_dep('glfw',curr_dir)
+    if not first_level_search:
+      curr_dir = os.path.join(curr_dir,'lib')
+      deps = self.find_dep('glew',curr_dir) and self.find_dep('glfw',curr_dir)
+      if deps:
+        folder_to_move = os.path.join(self.launch_dir,'ProjectTemplate_GL')
+        shutil.move(os.path.join(curr_dir,'glew32.dll'), folder_to_move)
+        shutil.move(os.path.join(curr_dir,'glfw3.dll'), folder_to_move)
+      else:
+        build_tool_dir = os.path.join(self.launch_dir,'buildTool.py')
+        self.process = subprocess.call(['python3',build_tool_dir,'-b',build_type,'-t',build_tool,'-d',self.launch_dir])
+         
+  def create_solution_file(self, project_name):
       solution_file_extension = '.sln'
       file_content = self.solution_file.replace('project_name',project_name)
       with open(project_name + solution_file_extension, 'w') as f:
         f.write(file_content)
 
-  def create_project_file(self,project_name):
+  def create_project_file(self, project_name):
       vcxproj_file_extension = '.vcxproj'
       file_content = self.vcxproj.replace('project_name', project_name)
       with open(project_name+vcxproj_file_extension, 'w') as f:
@@ -126,12 +134,10 @@ class ProjectBuilder:
         self.new_created_projects.remove(delete_project)
       return can_be_deleted
 
-  # open the created project
-  def open_visual_studio(self,open_project):
+  def open_visual_studio_project(self,open_project):
       if len(open_project) > 0 :
-        project_folder = os.path.join(visual_studio_projects_directory,open_project)
-        solution_file = os.path.join(project_folder,open_project+'.sln')
-        os.system('"%s"'% solution_file)
+        project_folder = os.path.join(self.visual_studio_projects_directory,open_project,open_project+'.sln')
+        os.system('"%s"'% project_folder)
         return True
       else:
         return False
@@ -150,24 +156,23 @@ class CallbacksController:
     delete_project = self.app.entry.get()
     suceed = self.project_builder.delete_project(delete_project)
     if suceed :
-      self.app.show_message("Project Deleted","open gl project: "+ delete_project + " has been deleted")
+      self.app.show_message("Project Deleted","open gl project: "+ delete_project + " has been deleted", self.app.MSG_TYPE.INFO)
       self.app.update_tree_view(self.get_visualStudio_proj_dir())
     else:
-      self.app.show_message("Delete Error", "you can onlt delete projects that\nbeing created in this session for safety")
+      self.app.show_message("Delete Error", "you can onlt delete projects that\nbeing created in this session for safety", self.app.MSG_TYPE.INFO)
 
   def create_project_call(self):
     project_name = self.app.entry.get()
-    # arguments
     build_type = self.app.build_type_combo_box.get()
     self.project_builder.set_up_dependencies(build_type)
-    self.project_builder.create_project(project_name,build_type)
+    self.project_builder.create_opengl_project(project_name,build_type)
     self.app.update_tree_view(self.get_visualStudio_proj_dir())
-    msg = "Project created","open gl project:"+ project_name + " succesfully created"
+    msg = "open gl project: "+ project_name + " succesfully created"
     self.app.show_message("Project created", msg, self.app.MSG_TYPE.INFO)
 
-  def open_visual_studio(self):
+  def open_visual_studio_project(self):
     open_project = self.app.entry.get()
-    succeed = self.project_builder.open_visual_studio(open_project)
+    succeed = self.project_builder.open_visual_studio_project(open_project)
     if succeed == False:
       self.app.show_message("project not found","select a project to open!",self.app.MSG_TYPE.ERROR)
 
@@ -180,7 +185,6 @@ class CallbacksController:
         title="Select project directory")
     vsproj_dir = self.get_visualStudio_proj_dir()
     self.app.update_tree_view(vsproj_dir)
-   # os.chdir(vsproj_dir)
     self.app.dir_label_text.set(vsproj_dir)
 
    #callbacks
@@ -195,21 +199,15 @@ class CallbacksController:
       self.project_builder.visual_studio_projects_directory = os.getcwd()
       self.app.dir_label_text.set(self.get_visualStudio_proj_dir())
       self.app.update_tree_view(self.get_visualStudio_proj_dir())
-      # restore path
-      os.chdir(old_path)
     else:
       open_file(text_item,self.get_visualStudio_proj_dir())
 
   def back_directory(self):
-      old_path = os.getcwd()
       os.chdir('..')
       self.project_builder.visual_studio_projects_directory = os.getcwd()
       vsproject_dir = self.get_visualStudio_proj_dir()
       self.app.update_tree_view(vsproject_dir)
       self.app.dir_label_text.set(vsproject_dir)
-      # restore path
-      os.chdir(old_path)
-
 
 ###########################################
 # this is the main Gui app or the View
@@ -285,17 +283,15 @@ class App:
     self.label1 = tk.Label(self.subframe_1, text="vs projects list")
     self.dir_label_text = tk.StringVar()
     self.dir_label_text.set(self.app_controller.get_visualStudio_proj_dir())
-
     self.curr_dir_label = tk.Label(self.subframe_1,textvariable = self.dir_label_text,\
     text = self.app_controller.get_visualStudio_proj_dir(),width = 100)
-
     self.curr_dir_label.pack(anchor='ne',padx=50)
     self.label = tk.Label(self.subframe_2, text="Project name")
     self.label.grid(row = 0, column=0)
     # create buttons
     self.delete_button = tk.Button(self.subframe_2,text="Delete", command = self.app_controller.delete_project)
     self.create_button = tk.Button(self.subframe_2, text = "Create", command= self.app_controller.create_project_call)
-    self.openproj_button = tk.Button(self.subframe_2, text = "Open", command = self.app_controller.open_visual_studio)
+    self.openproj_button = tk.Button(self.subframe_2, text = "Open", command = self.app_controller.open_visual_studio_project)
     self.back_button = tk.Button(self.subframe_1,image = self.back_dir_icon, command = self.app_controller.back_directory)
     self.back_button.pack(anchor="nw")
     # set tree view callbacks and fill in the tree
@@ -320,11 +316,9 @@ class App:
     self.subframe_2.pack(fill=tk.BOTH,expand=True)
     self.main_frame.pack(fill=tk.BOTH,expand=True)
 
-
   def update_tree_view(self,visual_studio_projects_directory):
     self.project_list_box.delete(*self.project_list_box.get_children())
     self.fill_tree_view(visual_studio_projects_directory)
-
 
   def fill_tree_view(self,visual_studio_projects_directory):
     for d in os.listdir(visual_studio_projects_directory):
@@ -353,11 +347,7 @@ class App:
       messagebox.showinfo(title,msg)
     elif type == self.MSG_TYPE.ERROR :
       messagebox.showerror(title,msg)
-
-def main():
+  
+if __name__ == "__main__":
   app = App()
   app.run()
-
-if __name__ == "__main__":
-  main()
-

@@ -1,10 +1,11 @@
 import sys
 from itertools import islice
 from subprocess import Popen, PIPE
+from PIL import Image, ImageTk
 from textwrap import dedent
 from threading import Thread
 import datetime
-from queue import Queue, Empty # Python 3
+from queue import Queue, Empty
 import logging
 import signal
 import time
@@ -19,9 +20,12 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class DisplaySubprocessOutputDemo:
-    def __init__(self, build_type, build_tool):
-        self.process = Popen(['python3','depsManager.py','--build_type',build_type,'--build_tool',build_tool],\
+
+    def __init__(self, build_type, build_tool, launch_dir):
+        script_dir = os.path.join(launch_dir, 'depsManager.py')
+        self.process = Popen(['python3',script_dir,'--build_type',build_type,'--build_tool',build_tool,'-d',launch_dir],\
             stdout=PIPE,stderr=PIPE)
+    
         # launch thread to read the subprocess output
         # log the subprocess output into the logger in a background thread
         t = Thread(target=self.reader_thread)
@@ -38,7 +42,6 @@ class DisplaySubprocessOutputDemo:
             time.sleep(2)
             os._exit(1)
             
-       
     def quit(self):
         self.process.kill() # exit subprocess if GUI is closed (zombie!)
 
@@ -51,14 +54,11 @@ class QueueHandler(logging.Handler):
     def emit(self, record):
         self.log_queue.put(record)
 
-
 class ConsoleUi:
-    """Poll messages from a logging queue and display them in a scrolled text widget"""
-
+    # Poll messages from a logging queue and display them in a scrolled text widget
     def __init__(self, frame):
         self.frame = frame
         # Create a ScrolledText wdiget
-        
         self.text_options = {"state": "disabled",
                              "bg": "black",
                              "fg": "#08c614",
@@ -100,23 +100,18 @@ class ConsoleUi:
                 break
             else:
                 self.display(record)
-        self.frame.after(70, self.poll_log_queue)
+        self.frame.after(100, self.poll_log_queue)
 
 class App:
 
-    def __init__(self, root,build_type,build_tool):
-        self.root = root
-        root.title('Building dependencies')
-        # Create the panes and frames
-        vertical_pane = ttk.PanedWindow(self.root, orient=VERTICAL)
-        vertical_pane.pack()
-        horizontal_pane = ttk.PanedWindow(vertical_pane, orient=HORIZONTAL)
-        vertical_pane.add(horizontal_pane)
-        console_frame = ttk.Labelframe(horizontal_pane, text="Console")
-        horizontal_pane.add(console_frame)
-        # Initialize all frames
-        self.console = ConsoleUi(console_frame)
-        self.subproc_out = DisplaySubprocessOutputDemo(build_type,build_tool)
+    def __init__(self, build_type, build_tool, launch_dir, icons_dir):
+        self.root = tk.Tk()
+        self.root.title('Building dependencies')
+        self.root.iconbitmap(icons_dir)
+        self.console_frame = ttk.Labelframe(self.root, text="Console")
+        self.console_frame.pack(fill=tk.BOTH,expand =True)
+        self.console = ConsoleUi(self.console_frame)
+        self.subproc_out = DisplaySubprocessOutputDemo(build_type, build_tool, launch_dir)
         self.root.protocol('WM_DELETE_WINDOW', self.quit)
         self.root.bind('<Control-q>', self.quit)
         signal.signal(signal.SIGINT, self.quit)
@@ -128,19 +123,21 @@ def parse_args():
     parser = argparse.ArgumentParser(description="depency build parameters")
     parser.add_argument('-b','--build_type',type=str ,metavar='',help='build type Debug or Release')
     parser.add_argument('-t','--build_tool', type=str,metavar='',help='NMake, make, VS')
+    parser.add_argument('-d','--launch_dir', type=str,metavar='',help='script launch directory')
     return parser.parse_args()
 
 def main():
     args = parse_args()
     build_type='Debug'
     build_tool = 'NMake Makefiles'
+    launch_dir = args.launch_dir
     if args.build_type:
         build_type = args.build_type
     if args.build_tool :
         build_tool = args.build_tool
     logging.basicConfig(level=logging.INFO)
-    root = tk.Tk()
-    app = App(root,build_type,build_tool)
+    icons_dir =  r'{}'.format(os.path.join(launch_dir,'icons','opengl.ico'))
+    app = App(build_type,build_tool,launch_dir,icons_dir)
     app.root.mainloop()
 
 if __name__ == '__main__':
