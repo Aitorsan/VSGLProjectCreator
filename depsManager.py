@@ -131,37 +131,36 @@ def parse_args():
     return parser.parse_args()
 
 if __name__ == '__main__':
-    args = parse_args()
-    old_path = os.getcwd()
-    b_type = 'Debug'
-    b_tool = 'NMake Makefiles'
-    launch_dir = args.launch_dir
+        args = parse_args()
+        old_path = os.getcwd()
+        b_type = 'Debug'
+        b_tool = 'NMake Makefiles'
+        launch_dir = args.launch_dir
    
-    if args.build_type:
-        b_type = args.build_type
+        if args.build_type:
+            b_type = args.build_type
 
-    if args.build_tool :
-        b_tool = args.build_tool
+        if args.build_tool :
+            b_tool = args.build_tool
         
-    curr_dir = os.path.join(launch_dir,'ProjectTemplate_GL','dependencies')
-    os.chdir(curr_dir)
-    dependency_manager = DependencyManager(curr_dir,'../lib')
-    # Check if the library is already there
-    if not dependency_manager.find_dep('glfw'):
-        print("---> glfw not found...")
-        dependency_manager.download_lib(DependencyManager.download_link_glfw,DependencyManager.glfw_str_zip)
-        print("---> Building glfw...")
-        dependency_manager.build_glfw(b_type,b_tool)
+        curr_dir = os.path.join(launch_dir,'ProjectTemplate_GL','dependencies')
+        os.chdir(curr_dir)
+        dependency_manager = DependencyManager(curr_dir,'../lib')
+        # Check if the library is already there
+        if not dependency_manager.find_dep('glfw'):
+            print("---> glfw not found...")
+            dependency_manager.download_lib(DependencyManager.download_link_glfw,DependencyManager.glfw_str_zip)
+            print("---> Building glfw...")
+            dependency_manager.build_glfw(b_type,b_tool)
 
-    if not dependency_manager.find_dep('glew'):
-        print("---> glew not found...")
-        dependency_manager.download_lib(DependencyManager.download_link_glew,DependencyManager.glew_str_zip)       
-        print("---> Building glew...")
-        dependency_manager.build_glew(b_tool)
-        print(' Dependencies sucessfully build ')
-    print(os.getcwd())
-    # Install librariers
-    dependency_manager.install_glew()
-    dependency_manager.install_glfw(b_type)
-    print(old_path)
-    os.chdir(old_path)
+        if not dependency_manager.find_dep('glew'):
+            print("---> glew not found...")
+            dependency_manager.download_lib(DependencyManager.download_link_glew,DependencyManager.glew_str_zip)       
+            print("---> Building glew...")
+            dependency_manager.build_glew(b_tool)
+            print(' Dependencies sucessfully build ')
+        # Install librariers
+        dependency_manager.install_glew()
+        dependency_manager.install_glfw(b_type)
+        os.chdir(old_path)
+        os._exit(1)

@@ -4,11 +4,18 @@
 #include <glm/gtc/matrix_inverse.hpp>
 #include <GLFW/glfw3.h>
 #include <iostream>
+
 Camera::Camera()
-    :Camera(0.0f, 0.0f, 0.0f, 45.0f)
+	: CameraPos{ 0.0f, 0.0f,3.0f }
+	, CameraFront{ 0, 0,-1.0f }
+	, CameraUp{ 0, 1, 0 }
+	, yaw{ -90 }
+	, pitch{ 0.0f }
+	, lastX{ 0.0f }
+	, lastY{ 0.0f}
+	, init{ true }
 {
 }
-
 Camera::Camera(float x, float y, float z, float fov)
 	: CameraPos{x,y,z}
 	, CameraFront{ 0, 0,-1.0f }
@@ -23,8 +30,8 @@ Camera::Camera(float x, float y, float z, float fov)
 }
 
 void Camera::CheckMouseMovement(GLFWwindow& window)
-{   
-	
+{
+
 		double xpos{ 0 }, ypos{ 0 };
 		glfwGetCursorPos(&window, &xpos, &ypos);
 		if (!init)
@@ -38,7 +45,7 @@ void Camera::CheckMouseMovement(GLFWwindow& window)
 			float sensitivity = 0.1f;
 			xoffset *= sensitivity;
 			yoffset *= sensitivity;
-			
+
 
 			if (glfwGetMouseButton(&window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
 			{
@@ -48,7 +55,7 @@ void Camera::CheckMouseMovement(GLFWwindow& window)
 					pitch = 89.0f;
 				if (pitch < -89.0f)
 					pitch = -89.0f;
-			
+
 					glm::vec3 direction;
 					direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
 					direction.y = sin(glm::radians(pitch));
@@ -72,17 +79,17 @@ void Camera::CheckMouseMovement(GLFWwindow& window)
 					// don't forget to normalise the vector at some point
 					ray_wor = glm::normalize(ray_wor);
 					std::cout << '\r' << "xpos:" << ray_wor.x << ", ypos:" << ray_wor.y << ", zpos:" << ray_wor.z;
-					
-			
+
+
 					CameraFront = glm::normalize(direction);
-			        
-			
+
+
 			}
-			
-			
-				
-				
-			
+
+
+
+
+
 		}
 		init = false;
 }

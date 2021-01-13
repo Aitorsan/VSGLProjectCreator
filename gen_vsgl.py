@@ -53,29 +53,31 @@ class ProjectBuilder:
     self.new_created_projects = []
     self.solution_file = read_file(os.path.join(self.template_dir,'template.sln'))
 
-  def create_opengl_project(self,project_name,build_type):  
-    os.chdir(self.visual_studio_projects_directory)
-    # create solution directory in the folder where all visual studio projects are by default
-    os.makedirs(os.path.join(project_name, build_type))
-    # cd into this directory
-    os.chdir(project_name)
-    # create solution file
-    self.create_solution_file(project_name)
-    # copy the template folders, files and create the project directory
-    shutil.copytree(self.template_dir, os.path.join(os.getcwd(),project_name))
-    # cd into project file
-    os.chdir(project_name)
-    # create all the files
-    self.create_project_file(project_name)
-    self.create_project_user(project_name)
-    self.create_project_filters(project_name)
-    print(os.getcwd())
-    folder_to_move = os.path.join('..',build_type)
-    # move the libs to ../Debug folder
-    shutil.move('glew32.dll', folder_to_move)
-    shutil.move('glfw3.dll', folder_to_move)
-    self.new_created_projects.append(project_name)
-    os.chdir('../../')
+  def create_opengl_project(self,project_name,build_type):
+      os.chdir(self.visual_studio_projects_directory)
+      # create solution directory in the folder where all visual studio projects are by default
+      os.makedirs(os.path.join(project_name, build_type))
+      # cd into this directory
+      os.chdir(project_name)
+      # create solution file
+      self.create_solution_file(project_name)
+      # copy the template folders, files and create the project directory
+      shutil.copytree(self.template_dir, os.path.join(os.getcwd(),project_name))
+      # cd into project file
+      os.chdir(project_name)
+      # create all the files
+      self.create_project_file(project_name)
+      self.create_project_user(project_name)
+      self.create_project_filters(project_name)
+      print(os.getcwd())
+      folder_to_move = os.path.join('..',build_type)
+      # move the libs to ../Debug folder
+      shutil.move('glew32.dll', folder_to_move)
+      shutil.move('glfw3.dll', folder_to_move)
+      self.new_created_projects.append(project_name)
+      os.chdir('../../')
+
+
 
   def find_dep(self,dep_name,_dir):
         pattern = re.compile(r''.join(dep_name))
@@ -85,7 +87,7 @@ class ProjectBuilder:
             return False
         else:
             return True
-            
+
   def set_up_dependencies(self, build_type, build_tool = 'NMake Makefiles'):
     curr_dir = os.path.join(self.launch_dir,'ProjectTemplate_GL')
     first_level_search = self.find_dep('glew',curr_dir) and self.find_dep('glfw',curr_dir)
@@ -99,7 +101,7 @@ class ProjectBuilder:
       else:
         build_tool_dir = os.path.join(self.launch_dir,'buildTool.py')
         self.process = subprocess.call(['python3',build_tool_dir,'-b',build_type,'-t',build_tool,'-d',self.launch_dir])
-         
+
   def create_solution_file(self, project_name):
       solution_file_extension = '.sln'
       file_content = self.solution_file.replace('project_name',project_name)
@@ -164,11 +166,16 @@ class CallbacksController:
   def create_project_call(self):
     project_name = self.app.entry.get()
     build_type = self.app.build_type_combo_box.get()
-    self.project_builder.set_up_dependencies(build_type)
-    self.project_builder.create_opengl_project(project_name,build_type)
-    self.app.update_tree_view(self.get_visualStudio_proj_dir())
-    msg = "open gl project: "+ project_name + " succesfully created"
-    self.app.show_message("Project created", msg, self.app.MSG_TYPE.INFO)
+    try:
+      self.project_builder.set_up_dependencies(build_type)
+      self.project_builder.create_opengl_project(project_name,build_type)
+    except Exception as e:
+      msg = "openg gl project creation failed reason: "+str(e) + "\n make sure you had set up vcvars64.bat"
+      self.app.show_message("ERROR", msg, self.app.MSG_TYPE.ERROR)
+    else:
+      self.app.update_tree_view(self.get_visualStudio_proj_dir())
+      msg = "open gl project: "+ project_name + " succesfully created"
+      self.app.show_message("Project created", msg, self.app.MSG_TYPE.INFO)
 
   def open_visual_studio_project(self):
     open_project = self.app.entry.get()
@@ -187,7 +194,6 @@ class CallbacksController:
     self.app.update_tree_view(vsproj_dir)
     self.app.dir_label_text.set(vsproj_dir)
 
-   #callbacks
   def current_selected_items_callback(self,event):
     item = self.app.project_list_box.selection()[0]
     text_item = self.app.project_list_box.item(item,"text")
@@ -213,6 +219,7 @@ class CallbacksController:
 # this is the main Gui app or the View
 ###########################################
 class App:
+
   class MSG_TYPE(Enum):
     INFO = 1
     WARN = 2
@@ -224,7 +231,7 @@ class App:
     self.init_tkinter()
     self.load_icons()
     self.init_gui_elements()
-    
+
   def run(self):
     self.root.mainloop()
 
@@ -347,7 +354,7 @@ class App:
       messagebox.showinfo(title,msg)
     elif type == self.MSG_TYPE.ERROR :
       messagebox.showerror(title,msg)
-  
+
 if __name__ == "__main__":
   app = App()
   app.run()
