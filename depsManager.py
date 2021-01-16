@@ -57,7 +57,7 @@ class DependencyManager:
         shutil.copy(os.path.join(dll_dir,self.glew_dll_debug),self.install_dir)
         shutil.copy(os.path.join(lib_dir,self.glew_lib_debug),self.install_dir)
         shutil.copy(os.path.join(self.install_dir,self.glew_dll_debug),'../')
-        
+
     def install_glfw(self,build_type):
         print(os.getcwd())
         if not self.glfwdir_name:
@@ -68,7 +68,7 @@ class DependencyManager:
         shutil.copy(os.path.join(libs_dir,self.glfw_dll), self.install_dir)
         shutil.copy(os.path.join(libs_dir,self.glfw_lib), self.install_dir)
         shutil.copy(os.path.join(self.install_dir,self.glfw_dll),'../')
-       
+
     def find_dep(self,dep_name):
         pattern = re.compile(r''.join(dep_name))
         list_dirs = [ item for item in os.listdir(self.dependencies_dir)]
@@ -121,9 +121,9 @@ class DependencyManager:
         os.system(self.build_tool)
         # restore the path
         os.chdir(self.dependencies_dir)
-    
+
 def parse_args():
-   
+
     parser = argparse.ArgumentParser(description="depency build parameters")
     parser.add_argument('-b','--build_type',type=str ,metavar='',help='build type Debug or Release')
     parser.add_argument('-t','--build_tool', type=str,metavar='',help='NMake, make, VS')
@@ -136,13 +136,13 @@ if __name__ == '__main__':
         b_type = 'Debug'
         b_tool = 'NMake Makefiles'
         launch_dir = args.launch_dir
-   
+
         if args.build_type:
             b_type = args.build_type
 
         if args.build_tool :
             b_tool = args.build_tool
-        
+
         curr_dir = os.path.join(launch_dir,'ProjectTemplate_GL','dependencies')
         os.chdir(curr_dir)
         dependency_manager = DependencyManager(curr_dir,'../lib')
@@ -155,7 +155,7 @@ if __name__ == '__main__':
 
         if not dependency_manager.find_dep('glew'):
             print("---> glew not found...")
-            dependency_manager.download_lib(DependencyManager.download_link_glew,DependencyManager.glew_str_zip)       
+            dependency_manager.download_lib(DependencyManager.download_link_glew,DependencyManager.glew_str_zip)
             print("---> Building glew...")
             dependency_manager.build_glew(b_tool)
             print(' Dependencies sucessfully build ')

@@ -74,9 +74,30 @@ class ProjectBuilder:
       # move the libs to ../Debug folder
       shutil.move('glew32.dll', folder_to_move)
       shutil.move('glfw3.dll', folder_to_move)
+      print ("folder to move:", folder_to_move)
+      # move include dirs
+      glfw_include_dir=os.path.join('dependencies',self.get_folder_name('glfw',os.path.join(os.getcwd(),'dependencies')))
+      glfw_include_dir = os.path.join(glfw_include_dir, os.path.join('include','GLFW'))
+
+      glew_include_dir = os.path.join('dependencies',self.get_folder_name('glew',os.path.join(os.getcwd(),'dependencies')))
+      glew_include_dir  = os.path.join(glew_include_dir,os.path.join('include','GL'))
+      shutil.move(glfw_include_dir,'3dParty')
+      shutil.move(glew_include_dir,'3dParty')
       self.new_created_projects.append(project_name)
+      os.remove('template_filters.vcxproj.filters')
+      os.remove('template_user.vcxproj.user')
+      os.remove('template.vcxproj')
+      os.remove('template.sln')
+      shutil.rmtree('dependencies')
       os.chdir('../../')
 
+  def get_folder_name(self,dep_name,_dir):
+    pattern = re.compile(r''.join(dep_name))
+    list_dir = [ item for item in os.listdir(_dir)]
+    for d in list_dir:
+      if dep_name == d[0:len(dep_name)]:
+        return d
+    return 'Not found'
 
 
   def find_dep(self,dep_name,_dir):

@@ -1,16 +1,18 @@
+#include <stdexcept>
+#include <vector>
+#include <iostream>
+
 #include <GL/glew.h>
 #define GLFW_DLL
 #include <GLFW/glfw3.h>
-#include "../ShaderProgram/ShaderProgram.h"
-#include "camera.h"
-#include "utils.hpp"
-#include <stdexcept>
-#include <vector>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/constants.hpp>
 #include <glm/gtc/noise.hpp>
-#include <iostream>
+
+#include "ShaderProgram.h"
+#include "camera.h"
+#include "utils.hpp"
 
 void processInput(GLFWwindow* window, Camera& camera, float elapsedTime, float velocity);
 
