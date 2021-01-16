@@ -72,14 +72,10 @@ class ProjectBuilder:
       self.create_project_file(project_name)
       self.create_project_user(project_name)
       self.create_project_filters(project_name)
-      print(os.getcwd())
       folder_to_move = os.path.join('..',build_type)
       # move the libs to ../Debug folder
       shutil.move('glew32.dll', folder_to_move)
       shutil.move('glfw3.dll', folder_to_move)
-      print ("folder to move:", folder_to_move)
-
-
       # move include dirs
       glfw_include=os.path.join('dependencies',self.get_folder_name('glfw',os.path.join(os.getcwd(),'dependencies')))
       glfw_include=os.path.join(glfw_include, os.path.join('include','GLFW'))
@@ -102,7 +98,6 @@ class ProjectBuilder:
       if dep_name == d[0:len(dep_name)]:
         return d
     return 'Not found'
-
 
   def find_dep(self,dep_name,_dir):
         pattern = re.compile(r''.join(dep_name))
