@@ -13,9 +13,12 @@ from tkinter.scrolledtext import ScrolledText
 from PIL import Image, ImageTk
 from urllib import request
 from enum import Enum
+from pathlib import Path
 import subprocess
 from threading import Thread
 import re
+
+Path(os.path.join(os.getcwd(),"ProjectTemplate_GL\\dependencies")).mkdir(parents=True, exist_ok=True)
 
 # those are generic utils functions to read an write to a file
 def open_file(file,visual_studio_projects_directory):
@@ -75,21 +78,22 @@ class ProjectBuilder:
       shutil.move('glew32.dll', folder_to_move)
       shutil.move('glfw3.dll', folder_to_move)
       print ("folder to move:", folder_to_move)
-      # move include dirs
-      glfw_include_dir=os.path.join('dependencies',self.get_folder_name('glfw',os.path.join(os.getcwd(),'dependencies')))
-      glfw_include_dir = os.path.join(glfw_include_dir, os.path.join('include','GLFW'))
 
-      glew_include_dir = os.path.join('dependencies',self.get_folder_name('glew',os.path.join(os.getcwd(),'dependencies')))
-      glew_include_dir  = os.path.join(glew_include_dir,os.path.join('include','GL'))
-      shutil.move(glfw_include_dir,'3dParty')
-      shutil.move(glew_include_dir,'3dParty')
+
+      # move include dirs
+      glfw_include=os.path.join('dependencies',self.get_folder_name('glfw',os.path.join(os.getcwd(),'dependencies')))
+      glfw_include=os.path.join(glfw_include, os.path.join('include','GLFW'))
+      glew_include=os.path.join('dependencies',self.get_folder_name('glew',os.path.join(os.getcwd(),'dependencies')))
+      glew_include=os.path.join(glew_include,os.path.join('include','GL'))
+      shutil.move(glfw_include,'3dParty')
+      shutil.move(glew_include,'3dParty')
       self.new_created_projects.append(project_name)
       os.remove('template_filters.vcxproj.filters')
       os.remove('template_user.vcxproj.user')
       os.remove('template.vcxproj')
       os.remove('template.sln')
       shutil.rmtree('dependencies')
-      os.chdir('../../')
+      os.chdir('../../../')
 
   def get_folder_name(self,dep_name,_dir):
     pattern = re.compile(r''.join(dep_name))
